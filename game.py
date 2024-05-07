@@ -1,3 +1,19 @@
+"""
+To play the game Manually:
+- Prey 1: W, A, S, D
+- Prey 2: I, J, K, L
+- Hunter: Arrow keys
+
+Rules:
+- Prey wins if they reach the endpoint.
+- Hunter wins if they catch all the preys.
+- Preys can team up to take down the hunter.
+- Hunter loses if preys team up and catch the hunter.
+- Preys lose if they are caught by the hunter.
+
+"""
+
+
 import pygame
 import sys
 
