@@ -25,9 +25,9 @@ NUM_OBSTACLES = 50
 # Initialize Pygame
 pygame.init()
 
-prey1_agent = PreyAgent('prey1')
-prey2_agent = PreyAgent('prey2')
-hunter_agent = RandomAgent('hunter')
+prey1_agent = PreyAgent('prey1',"alive")
+prey2_agent = PreyAgent('prey2',"alive")
+hunter_agent = HunterAgent()
 screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
 clock = pygame.time.Clock()
 
@@ -223,21 +223,22 @@ def game_loop():
 
         if prey1_active:
             prey1_action, _, _ = prey1_agent.choose_action(state)
-            move_player(prey1_pos, prey1_action, prey1_active)
             if hunter_catches_prey(hunter_pos, prey1_pos):
                 remove_player('prey1')
                 print("Hunter has caught Prey 1!")
                 prey1_dead = True
                 prey1_active = False
+            move_player(prey1_pos, prey1_action, prey1_active)
 
         if prey2_active:
             prey2_action, _, _ = prey2_agent.choose_action(state)
-            move_player(prey2_pos, prey2_action, prey2_active)
             if hunter_catches_prey(hunter_pos, prey2_pos):
                 remove_player('prey2')
                 print("Hunter has caught Prey 2!")
                 prey2_dead = True
                 prey2_active = False
+            move_player(prey2_pos, prey2_action, prey2_active)
+
 
         if hunter_active:
             hunter_action, _, _ = hunter_agent.choose_action(state)
