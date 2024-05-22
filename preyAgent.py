@@ -155,10 +155,6 @@ class PreyAgent:
             self.combined = True
             if self.combined_prey_pos is None:
                 self.combined_prey_pos = prey_pos
-            print("ESTOU AQUI")
-            print("combined_prey_pos: ", self.combined_prey_pos)
-            print("prey_pos: ", prey_pos)
-            print("hunter_pos: ", hunter_pos)
             min_distance_to_hunter = float('inf')
             for move in possible_moves:
                 new_position = self.calculate_new_position(self.combined_prey_pos, move, grid_size)
@@ -166,14 +162,10 @@ class PreyAgent:
                     distance_to_hunter = abs(new_position[0] - hunter_pos[0]) + abs(new_position[1] - hunter_pos[1])
                     # Prefer moves that bring the prey closer to the hunter
                     if distance_to_hunter < min_distance_to_hunter:
-                        print("distance_to_hunter: ", distance_to_hunter)
-                        print("min_distance_to_hunter: ", min_distance_to_hunter)
                         min_distance_to_hunter = distance_to_hunter
                         best_move = move
                         self.combined_prey_pos = new_position
                         state['combined_prey_pos'] = self.combined_prey_pos
-                        print("BFDFBFBBFBFBFFFBBFBF", state["combined_prey_pos"])
-            print("SAI AQUI")
                           
         elif prey_pos != other_prey_pos and not self.ready_to_attack and not self.combined:
             self.ready_to_attack = False
