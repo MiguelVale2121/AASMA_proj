@@ -269,7 +269,7 @@ if __name__ == "__main__":
     game_loop()
 
 """
-
+testes
 def game_loop(train=False, num_episodes=1000):
     global prey1_active, prey2_active, hunter_active, prey1_reach, prey2_reach, prey1_dead, prey2_dead, combined_prey_active
     combined_prey_pos = None
