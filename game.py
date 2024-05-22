@@ -27,33 +27,18 @@ NUM_OBSTACLES = 50
 # Initialize Pygame
 pygame.init()
 
-""" prey1_agent = PreyAgent('prey1',"runner")
-prey2_agent = PreyAgent('prey2',"runner") """
-hunter_agent = RandomAgent('hunter')
+prey1_agent = PreyAgent('prey1',"runner")
+prey2_agent = PreyAgent('prey2',"runner")
+
+hunter_agent = HunterAgent()
 screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
 clock = pygame.time.Clock()
 
-# Player and Endpoint
-def set_initial_positions(prey1_strategy, prey2_strategy):
-    if prey1_strategy == "runner":
-        prey1_pos = [GRID_SIZE // 2, 0]  # Prey 1 start position for runner
-        hunter_pos = [GRID_SIZE // 2, GRID_SIZE - 2]  # Hunter start position for runner
-    else:
-        prey1_pos = [0, 0]  # Prey 1 start position for killer
-        hunter_pos = [0, GRID_SIZE -1]  # Hunter start position for killer
-    
-    if prey2_strategy == "runner":
-        prey2_pos = [GRID_SIZE // 2, 0]  # Prey 2 start position for runner
-        hunter_pos = [GRID_SIZE // 2, GRID_SIZE - 2]  # Hunter start position for runner
-    else:
-        prey2_pos = [GRID_SIZE - 1, GRID_SIZE - 1]  # Prey 2 start position for killer
-        hunter_pos = [0, GRID_SIZE -1]  # Hunter start position for killer 
-    end_pos = [GRID_SIZE // 2, GRID_SIZE - 1]
-    
-    return prey1_pos, prey2_pos, hunter_pos, end_pos
-
-# Set initial positions based on strategy
-prey1_pos, prey2_pos, hunter_pos, end_pos = set_initial_positions("runner", "runner")
+# Set initial positions
+prey1_pos = [0, 0]
+prey2_pos = [0, GRID_SIZE - 1]
+hunter_pos = [GRID_SIZE -1,GRID_SIZE // 2]
+end_pos = [GRID_SIZE - 1, GRID_SIZE // 2]
 
 # Active status
 prey1_active = True
@@ -204,7 +189,7 @@ def hunter_catches_prey(hunter_pos, prey_pos):
         (hunter_pos[1] == prey_pos[1] and abs(hunter_pos[0] - prey_pos[0]) == 1)
     )
 
-""" def game_loop():
+def game_loop():
     global prey1_active, prey2_active, hunter_active, prey1_reach, prey2_reach, prey1_dead, prey2_dead, combined_prey_active
     combined_prey_pos = None
     running = True
@@ -281,14 +266,18 @@ def hunter_catches_prey(hunter_pos, prey_pos):
         clock.tick(FPS)
 
 if __name__ == "__main__":
-    game_loop() """
-    
+    game_loop()
+
+"""
+
 def game_loop(train=False, num_episodes=1000):
     global prey1_active, prey2_active, hunter_active, prey1_reach, prey2_reach, prey1_dead, prey2_dead, combined_prey_active
     combined_prey_pos = None
 
-    prey1_agent = QLearningAgent('prey1', 'runner')
-    prey2_agent = QLearningAgent('prey2', 'runner')  # Assuming you have two separate agents for the preys
+    #prey1_agent = QLearningAgent('prey1', 'runner')
+    #prey2_agent = QLearningAgent('prey2', 'runner')  # Assuming you have two separate agents for the preys
+    prey1_agent = PreyAgent('prey1',"runner")
+    prey2_agent = PreyAgent('prey2',"runner")
 
     for episode in range(num_episodes):
         prey1_pos, prey2_pos, hunter_pos, end_pos = set_initial_positions(prey1_agent.strategy, prey2_agent.strategy)
@@ -368,4 +357,4 @@ def game_loop(train=False, num_episodes=1000):
             clock.tick(FPS)
 
 if __name__ == "__main__":
-    game_loop(train=True, num_episodes=1000)
+    game_loop(train=False, num_episodes=1000)"""

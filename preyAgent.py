@@ -73,6 +73,7 @@ class PreyAgent:
             # If no best move is found, move randomly to avoid being caught
             safe_moves = [move for move in possible_moves if self.is_safe_move(prey_pos, move, hunter_pos, obstacles, grid_size)]
             best_move = random.choice(safe_moves) if safe_moves else None
+            
 
         # Update recent positions
         new_position = self.calculate_new_position(prey_pos, best_move, grid_size)
@@ -88,7 +89,7 @@ class PreyAgent:
         hunter_pos = state['hunter_pos']
         obstacles = state['obstacles']
         grid_size = state['grid_size']
-
+        
         # Determine the possible moves
         possible_moves = ['up', 'down', 'left', 'right']
         best_move = None
@@ -107,22 +108,12 @@ class PreyAgent:
         for move in possible_moves:
             new_position = self.calculate_new_position(prey_pos, move, grid_size)
             if new_position and tuple(new_position) not in obstacles and new_position not in self.recent_positions:
-                distance_to_hunter = sqrt((new_position[0] - hunter_pos[0])**2 + abs(new_position[1] - hunter_pos[1])**2)
+                distance_to_hunter = sqrt((new_position[0] - hunter_pos[0])**2 + (new_position[1] - hunter_pos[1])**2)
 
                 # Prefer moves that increase the distance from the hunter
                 if distance_to_hunter > max_distance_to_hunter:
                     max_distance_to_hunter = distance_to_hunter
                     best_move = move
-
-        if best_move is None or self.is_adjacent_to_obstacle(prey_pos, obstacles):
-            # If no best move is found or the prey is adjacent to an obstacle, move away from nearby obstacles
-            safe_moves_from_obstacle = self.is_safe_move_from_obstacle(prey_pos, obstacles, grid_size)
-            for move in safe_moves_from_obstacle:
-                new_position = self.calculate_new_position(prey_pos, move, grid_size)
-                if new_position and tuple(new_position) not in self.previous_move_list:
-                    self.previous_move_list.append(new_position)
-                    best_move = move
-                    break
 
         if best_move is None:
             # If no best move is found, move randomly to avoid being caught
@@ -167,7 +158,7 @@ class PreyAgent:
                         self.combined_prey_pos = new_position
                         state['combined_prey_pos'] = self.combined_prey_pos
                           
-        elif prey_pos != other_prey_pos and not self.ready_to_attack and not self.combined:
+        elif (state['prey1_active'] and state['prey2_active']) and prey_pos != other_prey_pos and not self.ready_to_attack and not self.combined:
             self.ready_to_attack = False
             self.combined = False
             # Move towards the other prey to coordinate
