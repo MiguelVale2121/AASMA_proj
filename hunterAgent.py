@@ -1,3 +1,4 @@
+from math import sqrt
 
 class HunterAgent:
     def __init__(self):
@@ -17,7 +18,7 @@ class HunterAgent:
             return None, None, None
 
         # Calculate possible moves
-        possible_moves = ['up', 'down', 'left', 'right']
+        possible_moves = ['up', 'down', 'left', 'right', None]
         best_move = None
         min_distance = float('inf')
 
@@ -33,7 +34,7 @@ class HunterAgent:
                 new_position[0] += 1
             
             if tuple(new_position) not in obstacles:
-                distance = abs(new_position[0] - target_prey_pos[0]) + abs(new_position[1] - target_prey_pos[1])
+                distance = sqrt((new_position[0] - target_prey_pos[0])**2 + (new_position[1] - target_prey_pos[1])**2)
                 if distance < min_distance:
                     min_distance = distance
                     best_move = move

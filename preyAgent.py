@@ -1,5 +1,6 @@
 import random
 import utils
+from math import sqrt
 
 class PreyAgent:
     def __init__(self, name, strategy):
@@ -50,8 +51,8 @@ class PreyAgent:
         for move in possible_moves:
             new_position = self.calculate_new_position(prey_pos, move, grid_size)
             if new_position and tuple(new_position) not in obstacles and new_position not in self.recent_positions:
-                distance_to_end = abs(new_position[0] - end_pos[0]) + abs(new_position[1] - end_pos[1])
-                distance_to_hunter = abs(new_position[0] - hunter_pos[0]) + abs(new_position[1] - hunter_pos[1])
+                distance_to_end = sqrt((new_position[0] - end_pos[0])**2 + (new_position[1] - end_pos[1])**2)
+                distance_to_hunter = sqrt((new_position[0] - hunter_pos[0])**2 + (new_position[1] - hunter_pos[1])**2)
 
                 # Prefer moves that bring the prey closer to the end and farther from the hunter
                 if distance_to_end < min_distance and distance_to_hunter > 1:
@@ -106,7 +107,7 @@ class PreyAgent:
         for move in possible_moves:
             new_position = self.calculate_new_position(prey_pos, move, grid_size)
             if new_position and tuple(new_position) not in obstacles and new_position not in self.recent_positions:
-                distance_to_hunter = abs(new_position[0] - hunter_pos[0]) + abs(new_position[1] - hunter_pos[1])
+                distance_to_hunter = sqrt((new_position[0] - hunter_pos[0])**2 + abs(new_position[1] - hunter_pos[1])**2)
 
                 # Prefer moves that increase the distance from the hunter
                 if distance_to_hunter > max_distance_to_hunter:
@@ -265,7 +266,7 @@ class PreyAgent:
         if new_position is None or tuple(new_position) in obstacles:
             return False
 
-        distance_to_hunter = abs(new_position[0] - hunter_pos[0]) + abs(new_position[1] - hunter_pos[1])
+        distance_to_hunter = sqrt((new_position[0] - hunter_pos[0])**2 + (new_position[1] - hunter_pos[1])**2)
         return distance_to_hunter > 1
     
     def is_safe_move_from_obstacle(self, prey_pos, obstacles, grid_size):
