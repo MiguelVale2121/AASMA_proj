@@ -11,14 +11,18 @@ class PreyAgent:
         self.previous_move = None
         self.recent_positions = []  # List to track recently visited positions
         self.recent_positions_limit = 5  # Limit on how many recent positions to track
+        self.ready_to_attack = False
+        self.attack_distance = 2 
+        self.combined = False
+        self.combined_prey_pos = None
 
     def choose_action(self, state):
-        print(self.strategy)
         if self.strategy == "runner":
-            print("GAU")
             return self.runner_strategy_action(state)
         elif self.strategy == "alive":
             return self.alive_strategy_action(state)
+        elif self.strategy == "killer":
+            return self.killer_strategy_action(state)
     
     def runner_strategy_action(self, state):
         prey_pos = state[f'{self.name}_pos']
@@ -76,7 +80,6 @@ class PreyAgent:
             if len(self.recent_positions) > self.recent_positions_limit:
                 self.recent_positions.pop(0)  # Remove the oldest position if limit exceeded
 
-        print(f'{self.name} best move: {best_move}')
         return best_move, None, None
 
     def alive_strategy_action(self, state):
@@ -132,11 +135,116 @@ class PreyAgent:
             if len(self.recent_positions) > self.recent_positions_limit:
                 self.recent_positions.pop(0)  # Remove the oldest position if limit exceeded
 
-        print(f'{self.name} best move: {best_move}')
         return best_move, None, None
     
-    #def killer_strategy_action(self,state):
-        
+    def killer_strategy_action(self, state):
+        prey_pos = state[f'{self.name}_pos']
+        other_prey_name = 'prey1' if self.name == 'prey2' else 'prey2'
+        other_prey_pos = state[f'{other_prey_name}_pos']
+        hunter_pos = state['hunter_pos']
+        obstacles = state['obstacles']
+        grid_size = state['grid_size']
+
+        possible_moves = ['up', 'down', 'left', 'right']
+        best_move = None
+
+        # If the prey are together, they should stay together and move together
+        if prey_pos == other_prey_pos:
+            self.ready_to_attack = True
+            self.combined = True
+            if self.combined_prey_pos is None:
+                self.combined_prey_pos = prey_pos
+            print("ESTOU AQUI")
+            print("combined_prey_pos: ", self.combined_prey_pos)
+            print("prey_pos: ", prey_pos)
+            print("hunter_pos: ", hunter_pos)
+            min_distance_to_hunter = float('inf')
+            for move in possible_moves:
+                new_position = self.calculate_new_position(self.combined_prey_pos, move, grid_size)
+                if new_position and tuple(new_position) not in obstacles:
+                    distance_to_hunter = abs(new_position[0] - hunter_pos[0]) + abs(new_position[1] - hunter_pos[1])
+                    # Prefer moves that bring the prey closer to the hunter
+                    if distance_to_hunter < min_distance_to_hunter:
+                        print("distance_to_hunter: ", distance_to_hunter)
+                        print("min_distance_to_hunter: ", min_distance_to_hunter)
+                        min_distance_to_hunter = distance_to_hunter
+                        best_move = move
+                        self.combined_prey_pos = new_position
+                        state['combined_prey_pos'] = self.combined_prey_pos
+                        print("BFDFBFBBFBFBFFFBBFBF", state["combined_prey_pos"])
+            print("SAI AQUI")
+                          
+        elif prey_pos != other_prey_pos and not self.ready_to_attack and not self.combined:
+            self.ready_to_attack = False
+            self.combined = False
+            # Move towards the other prey to coordinate
+            min_distance_to_other_prey = float('inf')
+            for move in possible_moves:
+                new_position = self.calculate_new_position(prey_pos, move, grid_size)
+                if new_position and tuple(new_position) not in obstacles:
+                    distance_to_other_prey = abs(new_position[0] - other_prey_pos[0]) + abs(new_position[1] - other_prey_pos[1])
+                    # Prefer moves that bring the prey closer to the other prey
+                    if distance_to_other_prey < min_distance_to_other_prey:
+                        min_distance_to_other_prey = distance_to_other_prey
+                        best_move = move        
+                        
+        if self.is_adjacent_to_obstacle(prey_pos, obstacles) :
+            # If no best move is found, move away from nearby obstacles
+            safe_moves_from_obstacle = self.is_safe_move_from_obstacle(prey_pos, obstacles, grid_size)
+            for move in safe_moves_from_obstacle:
+                if move not in self.previous_move_list:
+                    self.previous_move_list.append(move)
+                    self.previous_move = best_move
+                    best_move = move
+                    break
+            
+
+        # Update recent positions
+        new_position = self.calculate_new_position(prey_pos, best_move, grid_size)
+        if new_position:
+            self.recent_positions.append(new_position)
+            if len(self.recent_positions) > self.recent_positions_limit:
+                self.recent_positions.pop(0)
+
+        return best_move, None, None
+    
+    def move_together(self, prey_pos, hunter_pos, obstacles, grid_size, possible_moves):
+        # Move to an adjacent position to the hunter
+        adjacent_positions = [
+            (hunter_pos[0], hunter_pos[1] - 1),  # Up
+            (hunter_pos[0], hunter_pos[1] + 1),  # Down
+            (hunter_pos[0] - 1, hunter_pos[1]),  # Left
+            (hunter_pos[0] + 1, hunter_pos[1])   # Right
+        ]
+        best_move = None
+
+        for move in possible_moves:
+            new_position = self.calculate_new_position(prey_pos, move, grid_size)
+            if new_position and tuple(new_position) not in obstacles and tuple(new_position) in adjacent_positions:
+                best_move = move
+                break
+
+        # If no adjacent move found, move towards the hunter
+        if best_move is None:
+            best_move = self.move_towards(prey_pos, hunter_pos, obstacles, grid_size, possible_moves)
+
+        return best_move
+
+    def move_towards(self, prey_pos, target_pos, obstacles, grid_size, possible_moves):
+        min_distance = float('inf')
+        best_move = None
+
+        for move in possible_moves:
+            new_position = self.calculate_new_position(prey_pos, move, grid_size)
+            if new_position and tuple(new_position) not in obstacles:
+                distance = abs(new_position[0] - target_pos[0]) + abs(new_position[1] - target_pos[1])
+                if distance < min_distance:
+                    min_distance = distance
+                    best_move = move
+
+        return best_move
+
+       
     
     def calculate_new_position(self, current_position, move, grid_size):
         new_position = current_position[:]
@@ -170,7 +278,6 @@ class PreyAgent:
                 {(prey_pos[0] - 1, prey_pos[1]): 'left'},  # Left
                 {(prey_pos[0] + 1, prey_pos[1]): 'right'}   # Right
             ]
-            print(f'{self.name} prey position: {prey_pos}')
             for pos in adjacent_positions:
                 pos_tuple = utils.convert_dicKeys_to_tuple(pos)
                 if pos_tuple not in obstacles:
@@ -190,3 +297,20 @@ class PreyAgent:
                 return True  # Player is adjacent to an obstacle
 
         return False
+    
+    def is_adjacent_to_hunter(self, prey_pos, hunter_pos):
+        if prey_pos is None or hunter_pos is None:
+            return False
+        adjacent_positions = [
+            (hunter_pos[0], hunter_pos[1] - 1),
+            (hunter_pos[0], hunter_pos[1] + 1),
+            (hunter_pos[0] - 1, hunter_pos[1]),
+            (hunter_pos[0] + 1, hunter_pos[1])
+        ]
+        return tuple(prey_pos) in adjacent_positions
+
+    def is_within_attack_distance(self, prey_pos, hunter_pos):
+        if prey_pos is None or hunter_pos is None:
+            return False
+        distance_to_hunter = abs(prey_pos[0] - hunter_pos[0]) + abs(prey_pos[1] - hunter_pos[1])
+        return distance_to_hunter <= self.attack_distance

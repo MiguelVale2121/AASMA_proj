@@ -18,6 +18,7 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 GRAY = (128, 128, 128)
+PURPLE = (128, 0, 128)
 
 # Number of obstacles
 NUM_OBSTACLES = 50
@@ -25,22 +26,39 @@ NUM_OBSTACLES = 50
 # Initialize Pygame
 pygame.init()
 
-prey1_agent = PreyAgent('prey1',"alive")
-prey2_agent = PreyAgent('prey2',"alive")
-hunter_agent = HunterAgent()
+prey1_agent = PreyAgent('prey1',"killer")
+prey2_agent = PreyAgent('prey2',"killer")
+hunter_agent = RandomAgent('hunter')
 screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
 clock = pygame.time.Clock()
 
 # Player and Endpoint
-prey1_pos = [GRID_SIZE // 2, 0]  # Player 1 start position
-prey2_pos = [GRID_SIZE // 2, 0]  # Player 2 start position
-hunter_pos = [GRID_SIZE // 2, GRID_SIZE - 1]  # Hunter start position
-end_pos = [GRID_SIZE // 2, GRID_SIZE - 1]  # Central endpoint
+def set_initial_positions(prey1_strategy, prey2_strategy):
+    if prey1_strategy == "runner":
+        prey1_pos = [GRID_SIZE // 2, 0]  # Prey 1 start position for runner
+        hunter_pos = [GRID_SIZE // 2, GRID_SIZE - 2]  # Hunter start position for runner
+    else:
+        prey1_pos = [0, 0]  # Prey 1 start position for killer
+        hunter_pos = [0, GRID_SIZE -1]  # Hunter start position for killer
+    
+    if prey2_strategy == "runner":
+        prey2_pos = [GRID_SIZE // 2, 0]  # Prey 2 start position for runner
+        hunter_pos = [GRID_SIZE // 2, GRID_SIZE - 2]  # Hunter start position for runner
+    else:
+        prey2_pos = [GRID_SIZE - 1, GRID_SIZE - 1]  # Prey 2 start position for killer
+        hunter_pos = [0, GRID_SIZE -1]  # Hunter start position for killer 
+    end_pos = [GRID_SIZE // 2, GRID_SIZE - 1]
+    
+    return prey1_pos, prey2_pos, hunter_pos, end_pos
+
+# Set initial positions based on strategy
+prey1_pos, prey2_pos, hunter_pos, end_pos = set_initial_positions(prey1_agent.strategy, prey2_agent.strategy)
 
 # Active status
 prey1_active = True
 prey2_active = True
 hunter_active = True
+combined_prey_active = False
 
 # Reach status
 prey1_reach = False
@@ -88,7 +106,7 @@ def is_not_obstacle(position):
 def move_player(position, direction, active):
     if not active:
         return
-
+    print(f"Moving player {position} {direction}")
     new_position = position[:]
     if direction == 'up':
         new_position[1] -= 1
@@ -98,24 +116,22 @@ def move_player(position, direction, active):
         new_position[0] -= 1
     elif direction == 'right':
         new_position[0] += 1
+    print(f"New position: {new_position}")
 
     if is_within_bounds(new_position) and is_not_obstacle(new_position):
         position[:] = new_position
 
-def check_opposite_sides(pos1, pos2, hunter_pos):
-    if pos1 is None or pos2 is None or hunter_pos is None:
-        return False
-    # Check horizontal opposition
-    horizontal_opposition = (pos1[0] == hunter_pos[0] - 1 and pos2[0] == hunter_pos[0] + 1) or (pos1[0] == hunter_pos[0] + 1 and pos2[0] == hunter_pos[0] - 1)
-    # Check vertical opposition
-    vertical_opposition = (pos1[1] == hunter_pos[1] - 1 and pos2[1] == hunter_pos[1] + 1) or (pos1[1] == hunter_pos[1] + 1 and pos2[1] == hunter_pos[1] - 1)
-    # Check diagonal opposition
-    diagonal_opposition = (pos1[0] == hunter_pos[0] - 1 and pos1[1] == hunter_pos[1] - 1 and pos2[0] == hunter_pos[0] + 1 and pos2[1] == hunter_pos[1] + 1) or \
-                          (pos1[0] == hunter_pos[0] + 1 and pos1[1] == hunter_pos[1] + 1 and pos2[0] == hunter_pos[0] - 1 and pos2[1] == hunter_pos[1] - 1)
+def is_adjacent_to_hunter(prey_pos, hunter_pos):
+        adjacent_positions = [
+            (hunter_pos[0], hunter_pos[1] - 1),  # Up
+            (hunter_pos[0], hunter_pos[1] + 1),  # Down
+            (hunter_pos[0] - 1, hunter_pos[1]),  # Left
+            (hunter_pos[0] + 1, hunter_pos[1])   # Right
+        ]
+        
+        return tuple(prey_pos) in adjacent_positions
 
-    return horizontal_opposition or vertical_opposition or diagonal_opposition
-
-def check_win_conditions(prey1_pos, prey2_pos, hunter_active, prey1_reach, prey2_reach, end_pos, prey1_dead, prey2_dead):
+def check_win_conditions(prey1_pos, prey2_pos, hunter_active, prey1_reach, prey2_reach, end_pos, prey1_dead, prey2_dead, combined_prey_pos):
     global hunter_pos, prey1_active, prey2_active
 
     # Check if prey1 reaches the endpoint
@@ -143,13 +159,6 @@ def check_win_conditions(prey1_pos, prey2_pos, hunter_active, prey1_reach, prey2
         print("Prey 1 has reached the endpoint! Game over.")
         return False
 
-    """ # Check if preys team up and take down the hunter
-    if check_opposite_sides(prey1_pos, prey2_pos, hunter_pos) and hunter_active:
-        print("Preys have teamed up and taken down the hunter!")
-        print("The hunter has lost!")
-        remove_player('hunter')
-        return False """
-
     # Check if hunter catches both preys
     if prey1_dead and prey2_dead and hunter_active:
         print("Hunter has caught both preys! Hunter wins!")
@@ -169,7 +178,11 @@ def get_game_state():
         'prey1_reach': prey1_reach,
         'prey2_reach': prey2_reach,
         'obstacles': obstacles,
-        'grid_size': GRID_SIZE
+        'grid_size': GRID_SIZE,
+        'prey1_ready_to_attack': prey1_agent.ready_to_attack,
+        'prey2_ready_to_attack': prey2_agent.ready_to_attack,
+        'combined_prey_active': combined_prey_active,
+        'combined_prey_pos': None
     }
 
 def remove_player(player):
@@ -193,7 +206,8 @@ def hunter_catches_prey(hunter_pos, prey_pos):
     )
 
 def game_loop():
-    global prey1_active, prey2_active, hunter_active, prey1_reach, prey2_reach, prey1_dead, prey2_dead
+    global prey1_active, prey2_active, hunter_active, prey1_reach, prey2_reach, prey1_dead, prey2_dead, combined_prey_active
+    combined_prey_pos = None
     running = True
     start_time = pygame.time.get_ticks()
     time_limit = 30 * 1000  # 30 seconds in milliseconds
@@ -213,45 +227,59 @@ def game_loop():
 
         screen.fill(WHITE)
         draw_grid()
-        draw_player(prey1_pos, GREEN)
-        draw_player(prey2_pos, BLUE)
+        if not combined_prey_active:
+            draw_player(prey1_pos, GREEN)
+            draw_player(prey2_pos, BLUE)
+        else:
+            draw_player(state['combined_prey_pos'], PURPLE)
         draw_player(hunter_pos, RED)
         draw_player(end_pos, BLACK)
         draw_obstacles()
 
         state = get_game_state()
+        
+        if prey1_active and prey2_active and prey1_pos == prey2_pos:
+            combined_prey_active = True
+            prey1_active = False
+            prey2_active = False
+            
+        if combined_prey_active:
+            combined_prey_action, _, _ = prey1_agent.choose_action(state)
+            move_player(state['combined_prey_pos'], combined_prey_action, combined_prey_active)
+            if is_adjacent_to_hunter(state['combined_prey_pos'], hunter_pos):
+                remove_player('hunter')
+                hunter_active = False
+                print("Combined prey has caught the hunter!")
+                running = False
 
-        if prey1_active:
-            prey1_action, _, _ = prey1_agent.choose_action(state)
+        else:
+            if prey1_active:
+                prey1_action, _, _ = prey1_agent.choose_action(state)
+                move_player(prey1_pos, prey1_action, prey1_active)
+
+            if prey2_active:
+                prey2_action, _, _ = prey2_agent.choose_action(state)
+                move_player(prey2_pos, prey2_action, prey2_active)
+                
+        if hunter_active:
+            hunter_action, _, _ = hunter_agent.choose_action(state)
+            move_player(hunter_pos, hunter_action, hunter_active)
             if hunter_catches_prey(hunter_pos, prey1_pos):
                 remove_player('prey1')
                 print("Hunter has caught Prey 1!")
                 prey1_dead = True
                 prey1_active = False
-            move_player(prey1_pos, prey1_action, prey1_active)
-
-        if prey2_active:
-            prey2_action, _, _ = prey2_agent.choose_action(state)
-            if hunter_catches_prey(hunter_pos, prey2_pos):
+            elif hunter_catches_prey(hunter_pos, prey2_pos):
                 remove_player('prey2')
                 print("Hunter has caught Prey 2!")
                 prey2_dead = True
                 prey2_active = False
-            move_player(prey2_pos, prey2_action, prey2_active)
 
-
-        if hunter_active:
-            hunter_action, _, _ = hunter_agent.choose_action(state)
-            move_player(hunter_pos, hunter_action, hunter_active)
-
-        # Check win conditions and assign rewards
-        if not check_win_conditions(prey1_pos, prey2_pos, hunter_active, prey1_reach, prey2_reach, end_pos, prey1_dead, prey2_dead):
+        if not check_win_conditions(prey1_pos, prey2_pos, hunter_active, prey1_reach, prey2_reach, end_pos, prey1_dead, prey2_dead, combined_prey_pos):
             running = False
 
         pygame.display.flip()
         clock.tick(FPS)
-
-
 
 if __name__ == "__main__":
     game_loop()
