@@ -1,6 +1,7 @@
 import pygame
 import sys
 import random
+import argparse
 from QLearningAgent import QLearningAgent
 from preyAgent import PreyAgent
 from hunterAgent import HunterAgent
@@ -27,9 +28,15 @@ NUM_OBSTACLES = 50
 # Initialize Pygame
 pygame.init()
 
-prey1_agent = PreyAgent('prey1',"runner")
-prey2_agent = PreyAgent('prey2',"runner")
+# Argument parser setup
+parser = argparse.ArgumentParser(description="Prey and Hunter Game")
+parser.add_argument('--prey1_strategy', type=str, choices=["runner", "killer", "alive"], required=True, help='Strategy for prey1')
+parser.add_argument('--prey2_strategy', type=str, choices=["runner", "killer", "alive"], required=True, help='Strategy for prey2')
+args = parser.parse_args()
 
+# Initialize agents based on user input
+prey1_agent = PreyAgent('prey1', args.prey1_strategy)
+prey2_agent = PreyAgent('prey2', args.prey2_strategy)
 hunter_agent = HunterAgent()
 screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
 clock = pygame.time.Clock()
@@ -37,7 +44,7 @@ clock = pygame.time.Clock()
 # Set initial positions
 prey1_pos = [0, 0]
 prey2_pos = [0, GRID_SIZE - 1]
-hunter_pos = [GRID_SIZE -1,GRID_SIZE // 2]
+hunter_pos = [GRID_SIZE - 1, GRID_SIZE // 2]
 end_pos = [GRID_SIZE - 1, GRID_SIZE // 2]
 
 # Active status
@@ -267,94 +274,3 @@ def game_loop():
 
 if __name__ == "__main__":
     game_loop()
-
-"""
-testes
-def game_loop(train=False, num_episodes=1000):
-    global prey1_active, prey2_active, hunter_active, prey1_reach, prey2_reach, prey1_dead, prey2_dead, combined_prey_active
-    combined_prey_pos = None
-
-    #prey1_agent = QLearningAgent('prey1', 'runner')
-    #prey2_agent = QLearningAgent('prey2', 'runner')  # Assuming you have two separate agents for the preys
-    prey1_agent = PreyAgent('prey1',"runner")
-    prey2_agent = PreyAgent('prey2',"runner")
-
-    for episode in range(num_episodes):
-        prey1_pos, prey2_pos, hunter_pos, end_pos = set_initial_positions(prey1_agent.strategy, prey2_agent.strategy)
-        prey1_active = True
-        prey2_active = True
-        hunter_active = True
-        combined_prey_active = False
-        prey1_reach = False
-        prey2_reach = False
-        prey1_dead = False
-        prey2_dead = False
-        running = True
-        start_time = pygame.time.get_ticks()
-        time_limit = 15 * 1000  # 30 seconds in milliseconds
-
-        while running:
-            current_time = pygame.time.get_ticks()
-            elapsed_time = current_time - start_time
-
-            if elapsed_time >= time_limit:
-                print("Time's up! Game over.")
-                running = False
-
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-                    pygame.quit()
-                    sys.exit()
-
-            screen.fill(WHITE)
-            draw_grid()
-            if not combined_prey_active:
-                draw_player(prey1_pos, GREEN)
-                draw_player(prey2_pos, BLUE)
-            else:
-                draw_player(state['combined_prey_pos'], PURPLE)
-            draw_player(hunter_pos, RED)
-            draw_player(end_pos, BLACK)
-            draw_obstacles()
-
-            state = get_game_state()
-
-            if prey1_active:
-                prey1_action, _, _ = prey1_agent.choose_action(state)
-                move_player(prey1_pos, prey1_action, prey1_active)
-                next_state = get_game_state()
-                reward = prey1_agent.get_reward(state, prey1_action, next_state)
-                print("Prey1 Reward: ", reward)
-                prey1_agent.update_q_values(state, prey1_action, reward, next_state)
-
-            if prey2_active:
-                prey2_action, _, _ = prey2_agent.choose_action(state)
-                move_player(prey2_pos, prey2_action, prey2_active)
-                next_state = get_game_state()
-                reward = prey2_agent.get_reward(state, prey2_action, next_state)
-                print("Prey2 Reward: ", reward)
-                prey2_agent.update_q_values(state, prey2_action, reward, next_state)
-
-            if hunter_active:
-                hunter_action, _, _ = hunter_agent.choose_action(state)
-                move_player(hunter_pos, hunter_action, hunter_active)
-                if hunter_catches_prey(hunter_pos, prey1_pos):
-                    remove_player('prey1')
-                    print("Hunter has caught Prey 1!")
-                    prey1_dead = True
-                    prey1_active = False
-                elif hunter_catches_prey(hunter_pos, prey2_pos):
-                    remove_player('prey2')
-                    print("Hunter has caught Prey 2!")
-                    prey2_dead = True
-                    prey2_active = False
-
-            if not check_win_conditions(prey1_pos, prey2_pos, hunter_active, prey1_reach, prey2_reach, end_pos, prey1_dead, prey2_dead, combined_prey_pos):
-                running = False
-
-            pygame.display.flip()
-            clock.tick(FPS)
-
-if __name__ == "__main__":
-    game_loop(train=False, num_episodes=1000)"""
