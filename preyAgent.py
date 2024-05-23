@@ -12,9 +12,6 @@ class PreyAgent:
         self.previous_move = None
         self.recent_positions = []  # List to track recently visited positions
         self.recent_positions_limit = 5  # Limit on how many recent positions to track
-        self.ready_to_attack = False
-        self.attack_distance = 2 
-        self.combined = False
         self.combined_prey_pos = None
 
     def choose_action(self, state):
@@ -39,7 +36,7 @@ class PreyAgent:
         min_distance = float('inf')
 
         if not self.initial_move_completed:
-            desired_move = 'left' if self.name == 'prey1' else 'right'
+            desired_move = 'right' 
             if desired_move in possible_moves:
                 self.initial_move_counter += 1
                 if self.initial_move_counter <= 5:  # Adjust the number of steps allowed towards the desired direction
@@ -96,7 +93,7 @@ class PreyAgent:
         max_distance_to_hunter = float('-inf')
 
         if not self.initial_move_completed:
-            desired_move = 'left' if self.name == 'prey1' else 'right'
+            desired_move = 'right'
             if desired_move in possible_moves:
                 self.initial_move_counter += 1
                 if self.initial_move_counter <= 5:  # Adjust the number of steps allowed towards the desired direction
@@ -141,9 +138,17 @@ class PreyAgent:
         best_move = None
 
         # If the prey are together, they should stay together and move together
+        
+        if not self.initial_move_completed:
+            desired_move = 'down' if self.name == 'prey1' else 'up'
+            if desired_move in possible_moves:
+                self.initial_move_counter += 1
+                if self.initial_move_counter <= 5:  # Adjust the number of steps allowed towards the desired direction
+                    return desired_move, None, None  # Move directly towards the desired side
+                else:
+                    self.initial_move_completed = True   
         if prey_pos == other_prey_pos:
-            self.ready_to_attack = True
-            self.combined = True
+            state['combined_prey_active'] = True
             if self.combined_prey_pos is None:
                 self.combined_prey_pos = prey_pos
             min_distance_to_hunter = float('inf')
@@ -157,10 +162,11 @@ class PreyAgent:
                         best_move = move
                         self.combined_prey_pos = new_position
                         state['combined_prey_pos'] = self.combined_prey_pos
-                          
-        elif (state['prey1_active'] and state['prey2_active']) and prey_pos != other_prey_pos and not self.ready_to_attack and not self.combined:
-            self.ready_to_attack = False
-            self.combined = False
+                        
+         
+        elif (state['prey1_active'] and state['prey2_active']) and prey_pos != other_prey_pos and not state['combined_prey_active']:
+            ("NAO ENTRO AQUI??????????", prey_pos)
+            state['combined_prey_active'] = False
             # Move towards the other prey to coordinate
             min_distance_to_other_prey = float('inf')
             for move in possible_moves:
@@ -292,9 +298,3 @@ class PreyAgent:
             (hunter_pos[0] + 1, hunter_pos[1])
         ]
         return tuple(prey_pos) in adjacent_positions
-
-    def is_within_attack_distance(self, prey_pos, hunter_pos):
-        if prey_pos is None or hunter_pos is None:
-            return False
-        distance_to_hunter = abs(prey_pos[0] - hunter_pos[0]) + abs(prey_pos[1] - hunter_pos[1])
-        return distance_to_hunter <= self.attack_distance
