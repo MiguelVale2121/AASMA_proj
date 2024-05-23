@@ -5,13 +5,17 @@ import argparse
 from QLearningAgent import QLearningAgent
 from preyAgent import PreyAgent
 from hunterAgent import HunterAgent
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 from randomAgent import RandomAgent
+import pandas as pd
 
 # Constants
 GRID_SIZE = 30
 CELL_SIZE = 20
 SCREEN_SIZE = GRID_SIZE * CELL_SIZE
-FPS = 10
+FPS = 1000
 
 # Colors
 WHITE = (255, 255, 255)
@@ -196,12 +200,36 @@ def hunter_catches_prey(hunter_pos, prey_pos):
         (hunter_pos[1] == prey_pos[1] and abs(hunter_pos[0] - prey_pos[0]) == 1)
     )
 
+def reset_game_state():
+    global prey1_pos, prey2_pos, hunter_pos, end_pos, prey1_active, prey2_active, hunter_active
+    global combined_prey_active, combined_prey_pos, prey1_reach, prey2_reach, prey1_dead, prey2_dead
+    prey1_pos = [0, 0]
+    prey2_pos = [0, GRID_SIZE - 1]
+    hunter_pos = [GRID_SIZE - 1, GRID_SIZE // 2]
+    end_pos = [GRID_SIZE - 1, GRID_SIZE // 2]
+    prey1_active = True
+    prey2_active = True
+    hunter_active = True
+    combined_prey_active = False
+    combined_prey_pos = None
+    prey1_reach = False
+    prey2_reach = False
+    prey1_dead = False
+    prey2_dead = False
+    obstacles.clear()
+    obstacles.extend(generate_random_obstacles(NUM_OBSTACLES, GRID_SIZE))
+
 def game_loop():
     global prey1_active, prey2_active, hunter_active, prey1_reach, prey2_reach, prey1_dead, prey2_dead, combined_prey_active
     combined_prey_pos = None
     running = True
     start_time = pygame.time.get_ticks()
     time_limit = 30 * 1000  # 30 seconds in milliseconds
+
+    prey1moves = 0
+    prey2moves = 0
+    huntermoves = 0
+
     while running:
         current_time = pygame.time.get_ticks()
         elapsed_time = current_time - start_time
@@ -233,8 +261,8 @@ def game_loop():
             combined_prey_active = True
             prey1_active = False
             prey2_active = False
-            
-        if combined_prey_active:
+        
+        if args.prey1_strategy == 'killer' and args.prey2_strategy == 'killer' and combined_prey_active:
             combined_prey_action, _, _ = prey1_agent.choose_action(state)
             move_player(state['combined_prey_pos'], combined_prey_action, combined_prey_active)
             if is_adjacent_to_hunter(state['combined_prey_pos'], hunter_pos):
@@ -247,14 +275,17 @@ def game_loop():
             if prey1_active:
                 prey1_action, _, _ = prey1_agent.choose_action(state)
                 move_player(prey1_pos, prey1_action, prey1_active)
+                prey1moves += 1
 
             if prey2_active:
                 prey2_action, _, _ = prey2_agent.choose_action(state)
                 move_player(prey2_pos, prey2_action, prey2_active)
+                prey2moves += 1
                 
         if hunter_active:
             hunter_action, _, _ = hunter_agent.choose_action(state)
             move_player(hunter_pos, hunter_action, hunter_active)
+            huntermoves += 1
             if hunter_catches_prey(hunter_pos, prey1_pos):
                 remove_player('prey1')
                 print("Hunter has caught Prey 1!")
@@ -272,5 +303,99 @@ def game_loop():
         pygame.display.flip()
         clock.tick(FPS)
 
+        hunterwins = 0
+        onepreysurvives = 0
+        preywins = 0
+        if not prey1_dead and not prey2_dead:
+            preywins = 1
+        elif not prey1_dead or not prey2_dead:
+            onepreysurvives = 1
+        else: 
+            hunterwins = 1
+
+    return (prey1moves, prey2moves, huntermoves, preywins, onepreysurvives, hunterwins)
+
 if __name__ == "__main__":
-    game_loop()
+    data = (0,0,0,0,0,0)
+    stepsprey1 = []
+    stepsprey2 = []
+    stepshunter = []
+
+    for i in range(100):
+        run = game_loop()
+        data = tuple(map(lambda i, j: i + j, data, run))
+        stepsprey1 += [run[0]]
+        stepsprey2 += [run[1]]
+        stepshunter += [run[2]]
+
+        reset_game_state()
+
+    print(data)
+    print("prey1moves =", data[0], "prey2moves =", data[1], "huntermoves =", data[2], "preywins =", data[3], "onepreysurvives =", data[4], "hunterwins =", data[5])
+
+    # Prepare the data for moves
+    moves_data = {
+        'Character': ['Prey1', 'Prey2', 'Hunter'],
+        'Moves': [data[0], data[1], data[2]]
+    }
+
+    moves_df = pd.DataFrame(moves_data)
+
+    # Create the bar plot for moves
+    sns.set(style="whitegrid")
+    plt.figure(figsize=(8, 6))
+    moves_plot = sns.barplot(x='Character', y='Moves', data=moves_df, palette='viridis', hue="Character", legend=False)
+
+    # Add the exact numbers on the bars
+    for index, value in enumerate(moves_df['Moves']):
+        plt.text(index, value + 1, str(value), ha='center')
+
+    moves_plot.set_title('Moves of Characters')
+    plt.savefig('moves_plot.png')  # Save the plot as a PNG file
+    plt.close()
+
+    # Prepare the data for wins
+    wins_data = {
+        'Outcome': ['Prey Wins', 'One Prey Survives', 'Hunter Wins'],
+        'Count': [data[3], data[4], data[5]]
+    }
+
+    wins_df = pd.DataFrame(wins_data)
+
+    # Create the bar plot for wins
+    plt.figure(figsize=(8, 6))
+    wins_plot = sns.barplot(x='Outcome', y='Count', data=wins_df, palette='viridis', hue="Outcome", legend=False)
+
+    # Add the exact numbers on the bars
+    for index, value in enumerate(wins_df['Count']):
+        plt.text(index, value + 0.05, str(value), ha='center')
+
+    wins_plot.set_title('Game Outcomes')
+    plt.savefig('wins_plot.png')  # Save the plot as a PNG file
+    plt.close()
+
+
+    combined_prey_steps = list(map(lambda i, j: i + j, stepsprey1, stepsprey2))
+
+    agent_steps = {
+        'Prey 1': stepsprey1,
+        'Prey 2': stepsprey2,
+        'Hunter': stepshunter
+    }
+
+    avg_steps = {agent: sum(steps) / len(steps) for agent, steps in agent_steps.items()}
+    errors = {agent: (max(steps) - min(steps)) / 2 for agent, steps in agent_steps.items()}
+
+    fig, ax = plt.subplots()
+    bars = ax.bar(avg_steps.keys(), avg_steps.values(), yerr=errors.values(), capsize=5, color=['green', 'blue', 'red'])
+
+    ax.set_ylabel('Avg. Steps Per Episode')
+    ax.set_title('Average Steps Per Episode for Each Agent')
+
+    for bar, steps in zip(bars, avg_steps.values()):
+        height = bar.get_height()
+        ax.annotate(f'{steps:.2f}', xy=(bar.get_x() + bar.get_width() / 2, height), xytext=(0, 3), textcoords="offset points", ha='center', va='bottom')
+
+    plt.savefig('wins_plot_again.png')  # Save the plot as a PNG file
+    plt.close()
+
