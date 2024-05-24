@@ -198,52 +198,21 @@ class PreyAgent:
             
 
         # Update recent positions
-        new_position = self.calculate_new_position(prey_pos, best_move, grid_size)
-        if new_position:
-            self.recent_positions.append(new_position)
-            if len(self.recent_positions) > self.recent_positions_limit:
-                self.recent_positions.pop(0)
+        if not state['combined_prey_active']:
+            new_position = self.calculate_new_position(prey_pos, best_move, grid_size)
+            if new_position:
+                self.recent_positions.append(new_position)
+                if len(self.recent_positions) > self.recent_positions_limit:
+                    self.recent_positions.pop(0)
+        if state['combined_prey_active']:
+            new_position = self.calculate_new_position(self.combined_prey_pos, best_move, grid_size)
+            if new_position:
+                self.recent_positions.append(new_position)
+                if len(self.recent_positions) > self.recent_positions_limit:
+                    self.recent_positions.pop(0)
 
         return best_move, None, None
-    
-    def move_together(self, prey_pos, hunter_pos, obstacles, grid_size, possible_moves):
-        # Move to an adjacent position to the hunter
-        adjacent_positions = [
-            (hunter_pos[0], hunter_pos[1] - 1),  # Up
-            (hunter_pos[0], hunter_pos[1] + 1),  # Down
-            (hunter_pos[0] - 1, hunter_pos[1]),  # Left
-            (hunter_pos[0] + 1, hunter_pos[1])   # Right
-        ]
-        best_move = None
 
-        for move in possible_moves:
-            new_position = self.calculate_new_position(prey_pos, move, grid_size)
-            if new_position and tuple(new_position) not in obstacles and tuple(new_position) in adjacent_positions:
-                best_move = move
-                break
-
-        # If no adjacent move found, move towards the hunter
-        if best_move is None:
-            best_move = self.move_towards(prey_pos, hunter_pos, obstacles, grid_size, possible_moves)
-
-        return best_move
-
-    def move_towards(self, prey_pos, target_pos, obstacles, grid_size, possible_moves):
-        min_distance = float('inf')
-        best_move = None
-
-        for move in possible_moves:
-            new_position = self.calculate_new_position(prey_pos, move, grid_size)
-            if new_position and tuple(new_position) not in obstacles:
-                distance = abs(new_position[0] - target_pos[0]) + abs(new_position[1] - target_pos[1])
-                if distance < min_distance:
-                    min_distance = distance
-                    best_move = move
-
-        return best_move
-
-       
-    
     def calculate_new_position(self, current_position, move, grid_size):
         new_position = current_position[:]
         if move == 'up' and current_position[1] > 0:
@@ -296,13 +265,4 @@ class PreyAgent:
 
         return False
     
-    def is_adjacent_to_hunter(self, prey_pos, hunter_pos):
-        if prey_pos is None or hunter_pos is None:
-            return False
-        adjacent_positions = [
-            (hunter_pos[0], hunter_pos[1] - 1),
-            (hunter_pos[0], hunter_pos[1] + 1),
-            (hunter_pos[0] - 1, hunter_pos[1]),
-            (hunter_pos[0] + 1, hunter_pos[1])
-        ]
-        return tuple(prey_pos) in adjacent_positions
+    
