@@ -220,18 +220,23 @@ def game_loop():
     running = True
     start_time = pygame.time.get_ticks()
     time_limit = 30 * 1000  # 30 seconds in milliseconds
-
+    frames_ran = 0
+    frames_limit = 200
     prey1moves = 0
     prey2moves = 0
     huntermoves = 0
     combinedPreyMoves = 0
 
     while running:
+        frames_ran+=1
         current_time = pygame.time.get_ticks()
         elapsed_time = current_time - start_time
 
         if elapsed_time >= time_limit:
             print("Time's up! Game over.")
+            running = False
+        
+        if frames_ran >= frames_limit:
             running = False
 
         for event in pygame.event.get():
