@@ -14,7 +14,7 @@ from randomAgent import RandomAgent
 GRID_SIZE = 30
 CELL_SIZE = 20
 SCREEN_SIZE = GRID_SIZE * CELL_SIZE
-FPS = 1000
+FPS = 10
 
 # Colors
 WHITE = (255, 255, 255)
@@ -33,13 +33,15 @@ pygame.init()
 
 # Argument parser setup
 parser = argparse.ArgumentParser(description="Prey and Hunter Game")
-parser.add_argument('--prey1_strategy', type=str, choices=["runner", "killer", "alive"], required=True, help='Strategy for prey1')
-parser.add_argument('--prey2_strategy', type=str, choices=["runner", "killer", "alive"], required=True, help='Strategy for prey2')
+parser.add_argument('--prey1_strategy', type=str, choices=["runner", "killer", "alive", "random","mixed"], required=True, help='Strategy for prey1')
+parser.add_argument('--prey2_strategy', type=str, choices=["runner", "killer", "alive", "random","mixed"], required=True, help='Strategy for prey2')
 args = parser.parse_args()
 
 # Initialize agents based on user input
 prey1_agent = PreyAgent('prey1', args.prey1_strategy)
 prey2_agent = PreyAgent('prey2', args.prey2_strategy)
+""" prey1_agent = RandomAgent('prey1')
+prey2_agent = RandomAgent('prey2') """
 hunter_agent = HunterAgent()
 screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
 clock = pygame.time.Clock()
@@ -126,10 +128,10 @@ def is_adjacent_to_hunter(prey_pos, hunter_pos):
             (hunter_pos[0] - 1, hunter_pos[1]),
             (hunter_pos[0] + 1, hunter_pos[1])
         ]
-        return tuple(prey_pos) in adjacent_positions
+        return tuple(prey_pos) in adjacent_positions or tuple(prey_pos) == tuple(hunter_pos)
 
-def check_win_conditions(prey1_pos, prey2_pos, hunter_active, prey1_reach, prey2_reach, end_pos, prey1_dead, prey2_dead, combined_prey_pos):
-    global hunter_pos, prey1_active, prey2_active
+def check_win_conditions():
+    global hunter_pos, prey1_active, prey2_active, prey1_pos, prey2_pos, hunter_active, prey1_reach, prey2_reach, end_pos, prey1_dead, prey2_dead
 
     # Check if prey1 reaches the endpoint
     if prey1_pos == end_pos and not prey1_reach:
@@ -147,11 +149,6 @@ def check_win_conditions(prey1_pos, prey2_pos, hunter_active, prey1_reach, prey2
     if prey1_reach and prey2_reach:
         print("Both preys have reached the endpoint! Game over.")
         return False
-
-    print("Prey 1 dead: ", prey1_dead)
-    print("Prey 1 pos: ", prey1_pos)
-    print("Prey 1 active: ", prey1_active)
-    print("Prey 1 reach: ", prey1_reach)
     if prey1_dead and prey2_reach:
         print("Prey 2 has reached the endpoint! Game over.")
         return False
@@ -245,10 +242,11 @@ def game_loop():
 
         screen.fill(WHITE)
         draw_grid()
-        if not combined_prey_active:
+        if not combined_prey_active and prey1_active:
             draw_player(prey1_pos, GREEN)
+        if not combined_prey_active and prey2_active:
             draw_player(prey2_pos, BLUE)
-        else:
+        if combined_prey_active:
             draw_player(state['combined_prey_pos'], PURPLE)
         draw_player(hunter_pos, RED)
         draw_player(end_pos, BLACK)
@@ -267,7 +265,6 @@ def game_loop():
             combinedPreyMoves += 1
             if is_adjacent_to_hunter(state['combined_prey_pos'], hunter_pos):
                 remove_player('hunter')
-                print("FODASSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS")
                 hunter_active = False
                 print("Combined prey has caught the hunter!")
                 running = False
@@ -288,19 +285,17 @@ def game_loop():
             move_player(hunter_pos, hunter_action, hunter_active)
             huntermoves += 1
             if is_adjacent_to_hunter(prey1_pos,hunter_pos):
-                print("ENTRA AIII")
-                remove_player('prey1')
                 print("Hunter has caught Prey 1!")
                 prey1_dead = True
                 prey1_active = False
-            elif is_adjacent_to_hunter(prey2_pos,hunter_pos):
-                print("DBSAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
-                remove_player('prey2')
+                remove_player('prey1')
+            if is_adjacent_to_hunter(prey2_pos,hunter_pos):
                 print("Hunter has caught Prey 2!")
                 prey2_dead = True
                 prey2_active = False
+                remove_player('prey2')
 
-        if not check_win_conditions(prey1_pos, prey2_pos, hunter_active, prey1_reach, prey2_reach, end_pos, prey1_dead, prey2_dead, combined_prey_pos):
+        if not check_win_conditions():
             running = False
         
 
@@ -311,9 +306,21 @@ def game_loop():
         onepreysurvives = 0
         preywins = 0
         combined_prey_wins = 0
+        print("##########################################")
+        print("PREY1")
+        print("Prey 1 dead: ", prey1_dead)
+        print("Prey 1 pos: ", prey1_pos)
+        print("Prey 1 active: ", prey1_active)
+        print("Prey 1 reach: ", prey1_reach)
+        print("PREY2")
+        print("Prey 2 dead: ", prey2_dead)
+        print("Prey 2 pos: ", prey2_pos)
+        print("Prey 2 active: ", prey2_active)
+        print("Prey 2 reach: ", prey2_reach)
+        print("##########################################")
         if not prey1_dead and not prey2_dead and not combined_prey_active:
             preywins = 1
-        elif (prey1_dead and prey2_reach) or (prey2_dead and prey1_reach):
+        elif prey1_reach or prey2_reach:
             onepreysurvives = 1
         elif not hunter_active and combined_prey_active:
             combined_prey_wins = 1
@@ -360,7 +367,7 @@ if __name__ == "__main__":
         plt.text(index, value + 1, str(value), ha='center')
 
     moves_plot.set_title('Moves of Characters')
-    plt.savefig('moves_plot.png')  # Save the plot as a PNG file
+    plt.savefig(f'moves_plot_{args.prey1_strategy}.png')  # Save the plot as a PNG file
     plt.close()
 
     # Prepare the data for wins
@@ -380,11 +387,11 @@ if __name__ == "__main__":
         plt.text(index, value + 0.05, str(value), ha='center')
 
     wins_plot.set_title('Game Outcomes')
-    plt.savefig('wins_plot.png')  # Save the plot as a PNG file
+    plt.savefig(f'wins_plot_{args.prey1_strategy}.png')  # Save the plot as a PNG file
     plt.close()
 
 
-    if (args.prey1_strategy == 'alive' and args.prey2_strategy == 'alive') or (args.prey1_strategy == 'runner' and args.prey2_strategy == 'runner'):
+    if (args.prey1_strategy == 'alive' and args.prey2_strategy == 'alive') or (args.prey1_strategy == 'runner' and args.prey2_strategy == 'runner') or (args.prey1_strategy == 'random' and args.prey2_strategy == 'random'):
         # Plot the data
         agent_steps = {
             'Prey 1': stepsprey1,
@@ -414,6 +421,6 @@ if __name__ == "__main__":
         height = bar.get_height()
         ax.annotate(f'{steps:.2f}', xy=(bar.get_x() + bar.get_width() / 2, height), xytext=(0, 3), textcoords="offset points", ha='center', va='bottom')
 
-    plt.savefig('wins_plot_again.png')  # Save the plot as a PNG file
+    plt.savefig(f'wins_plot_again_{args.prey1_strategy}.png')  # Save the plot as a PNG file
     plt.close()
 

@@ -21,6 +21,8 @@ class PreyAgent:
             return self.alive_strategy_action(state)
         elif self.strategy == "killer":
             return self.killer_strategy_action(state)
+        elif self.strategy == "mixed":
+            return self.mixed_strategy_action(state)
     
     def runner_strategy_action(self, state):
         prey_pos = state[f'{self.name}_pos']
@@ -213,6 +215,27 @@ class PreyAgent:
 
         return best_move, None, None
 
+    def mixed_strategy_action(self, state):
+        prey1_pos = state['prey1_pos']
+        prey2_pos = state['prey2_pos']
+        hunter_pos = state['hunter_pos']
+
+        distance_prey1_to_hunter=0
+        distance_prey2_to_hunter=0
+
+        # Determine which prey is closer to the hunter
+        if prey1_pos is not None:
+            distance_prey1_to_hunter = sqrt((prey1_pos[0] - hunter_pos[0])**2 + (prey1_pos[1] - hunter_pos[1])**2)
+        if prey2_pos is not None:
+            distance_prey2_to_hunter = sqrt((prey2_pos[0] - hunter_pos[0])**2 + (prey2_pos[1] - hunter_pos[1])**2)
+
+        if (self.name == 'prey1' and distance_prey1_to_hunter <= distance_prey2_to_hunter) or \
+           (self.name == 'prey2' and distance_prey2_to_hunter < distance_prey1_to_hunter):
+            return self.alive_strategy_action(state)
+        else:
+            return self.runner_strategy_action(state)
+                    
+        
     def calculate_new_position(self, current_position, move, grid_size):
         new_position = current_position[:]
         if move == 'up' and current_position[1] > 0:
