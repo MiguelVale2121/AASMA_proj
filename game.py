@@ -9,7 +9,6 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from randomAgent import RandomAgent
-import pandas as pd
 
 # Constants
 GRID_SIZE = 30
@@ -224,11 +223,12 @@ def game_loop():
     combined_prey_pos = None
     running = True
     start_time = pygame.time.get_ticks()
-    time_limit = 30 * 1000  # 30 seconds in milliseconds
+    time_limit = 15 * 1000  # 30 seconds in milliseconds
 
     prey1moves = 0
     prey2moves = 0
     huntermoves = 0
+    combinedPreyMoves = 0
 
     while running:
         current_time = pygame.time.get_ticks()
@@ -265,6 +265,7 @@ def game_loop():
         if args.prey1_strategy == 'killer' and args.prey2_strategy == 'killer' and combined_prey_active:
             combined_prey_action, _, _ = prey1_agent.choose_action(state)
             move_player(state['combined_prey_pos'], combined_prey_action, combined_prey_active)
+            combinedPreyMoves += 1
             if is_adjacent_to_hunter(state['combined_prey_pos'], hunter_pos):
                 remove_player('hunter')
                 hunter_active = False
@@ -306,37 +307,42 @@ def game_loop():
         hunterwins = 0
         onepreysurvives = 0
         preywins = 0
+        combined_prey_wins = 0
         if not prey1_dead and not prey2_dead:
             preywins = 1
         elif not prey1_dead or not prey2_dead:
             onepreysurvives = 1
+        elif not hunter_active:
+            combined_prey_wins = 1
         else: 
             hunterwins = 1
 
-    return (prey1moves, prey2moves, huntermoves, preywins, onepreysurvives, hunterwins)
+    return (prey1moves, prey2moves, huntermoves, preywins, onepreysurvives, hunterwins, combined_prey_wins, combinedPreyMoves)
 
 if __name__ == "__main__":
-    data = (0,0,0,0,0,0)
+    data = (0,0,0,0,0,0,0,0)
     stepsprey1 = []
     stepsprey2 = []
     stepshunter = []
+    stepsCombinedPrey = []
 
-    for i in range(100):
+    for i in range(10):
         run = game_loop()
         data = tuple(map(lambda i, j: i + j, data, run))
         stepsprey1 += [run[0]]
         stepsprey2 += [run[1]]
         stepshunter += [run[2]]
+        stepsCombinedPrey += [run[7]]
 
         reset_game_state()
 
     print(data)
-    print("prey1moves =", data[0], "prey2moves =", data[1], "huntermoves =", data[2], "preywins =", data[3], "onepreysurvives =", data[4], "hunterwins =", data[5])
+    print("prey1moves =", data[0], "prey2moves =", data[1], "huntermoves =", data[2], "preywins =", data[3], "onepreysurvives =", data[4], "hunterwins =", data[5], "combined_prey_wins =", data[6], "combined_prey_moves =", data[7])
 
     # Prepare the data for moves
     moves_data = {
-        'Character': ['Prey1', 'Prey2', 'Hunter'],
-        'Moves': [data[0], data[1], data[2]]
+        'Character': ['Prey1', 'Prey2', 'Hunter', 'Combined Prey'],
+        'Moves': [data[0], data[1], data[2], data[7]]
     }
 
     moves_df = pd.DataFrame(moves_data)
@@ -356,8 +362,8 @@ if __name__ == "__main__":
 
     # Prepare the data for wins
     wins_data = {
-        'Outcome': ['Prey Wins', 'One Prey Survives', 'Hunter Wins'],
-        'Count': [data[3], data[4], data[5]]
+        'Outcome': ['Prey Wins', 'One Prey Survives', 'Hunter Wins', 'Combined Prey Wins'],
+        'Count': [data[3], data[4], data[5], data[6]]
     }
 
     wins_df = pd.DataFrame(wins_data)
@@ -375,13 +381,22 @@ if __name__ == "__main__":
     plt.close()
 
 
-    combined_prey_steps = list(map(lambda i, j: i + j, stepsprey1, stepsprey2))
-
-    agent_steps = {
-        'Prey 1': stepsprey1,
-        'Prey 2': stepsprey2,
-        'Hunter': stepshunter
-    }
+    if (args.prey1_strategy == 'alive' and args.prey2_strategy == 'alive') or (args.prey1_strategy == 'runner' and args.prey2_strategy == 'runner'):
+        # Plot the data
+        agent_steps = {
+            'Prey 1': stepsprey1,
+            'Prey 2': stepsprey2,
+            'Hunter': stepshunter
+        }
+        
+    elif args.prey1_strategy == 'killer' and args.prey2_strategy == 'killer':
+        agent_steps = {
+            'Prey 1': stepsprey1,
+            'Prey 2': stepsprey2,
+            'Hunter': stepshunter,
+            'Combined Prey': stepsCombinedPrey
+        }
+        
 
     avg_steps = {agent: sum(steps) / len(steps) for agent, steps in agent_steps.items()}
     errors = {agent: (max(steps) - min(steps)) / 2 for agent, steps in agent_steps.items()}

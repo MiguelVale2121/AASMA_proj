@@ -178,9 +178,17 @@ class PreyAgent:
                         min_distance_to_other_prey = distance_to_other_prey
                         best_move = move        
                         
-        if self.is_adjacent_to_obstacle(prey_pos, obstacles) :
+        if not state['combined_prey_active'] and self.is_adjacent_to_obstacle(prey_pos, obstacles) :
             # If no best move is found, move away from nearby obstacles
             safe_moves_from_obstacle = self.is_safe_move_from_obstacle(prey_pos, obstacles, grid_size)
+            for move in safe_moves_from_obstacle:
+                if move not in self.previous_move_list:
+                    self.previous_move_list.append(move)
+                    self.previous_move = best_move
+                    best_move = move
+                    break
+        elif state['combined_prey_active'] and self.is_adjacent_to_obstacle(self.combined_prey_pos, obstacles) :
+            safe_moves_from_obstacle = self.is_safe_move_from_obstacle(self.combined_prey_pos, obstacles, grid_size)
             for move in safe_moves_from_obstacle:
                 if move not in self.previous_move_list:
                     self.previous_move_list.append(move)
