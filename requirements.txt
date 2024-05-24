@@ -1,0 +1,6 @@
+pygame
+argparse
+pandas
+seaborn
+matplotlib
+
