@@ -14,7 +14,7 @@ from randomAgent import RandomAgent
 GRID_SIZE = 30
 CELL_SIZE = 20
 SCREEN_SIZE = GRID_SIZE * CELL_SIZE
-FPS = 10
+FPS = 1000
 
 # Colors
 WHITE = (255, 255, 255)
@@ -38,10 +38,12 @@ parser.add_argument('--prey2_strategy', type=str, choices=["runner", "killer", "
 args = parser.parse_args()
 
 # Initialize agents based on user input
-prey1_agent = PreyAgent('prey1', args.prey1_strategy)
-prey2_agent = PreyAgent('prey2', args.prey2_strategy)
-""" prey1_agent = RandomAgent('prey1')
-prey2_agent = RandomAgent('prey2') """
+if args.prey1_strategy == random and args.prey2_strategy == random:
+    prey1_agent = RandomAgent('prey1')
+    prey2_agent = RandomAgent('prey2')
+else:
+    prey1_agent = PreyAgent('prey1', args.prey1_strategy)
+    prey2_agent = PreyAgent('prey2', args.prey2_strategy)
 hunter_agent = HunterAgent()
 screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
 clock = pygame.time.Clock()
@@ -396,7 +398,7 @@ if __name__ == "__main__":
     plt.close()
 
 
-    if (args.prey1_strategy == 'alive' and args.prey2_strategy == 'alive') or (args.prey1_strategy == 'runner' and args.prey2_strategy == 'runner') or (args.prey1_strategy == 'random' and args.prey2_strategy == 'random'):
+    if (args.prey1_strategy == 'alive' and args.prey2_strategy == 'alive') or (args.prey1_strategy == 'runner' and args.prey2_strategy == 'runner') or (args.prey1_strategy == 'random' and args.prey2_strategy == 'random') or (args.prey1_strategy == 'mixed' and args.prey2_strategy == 'mixed'):
         # Plot the data
         agent_steps = {
             'Prey 1': stepsprey1,
