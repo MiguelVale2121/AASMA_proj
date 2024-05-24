@@ -38,21 +38,45 @@ parser.add_argument('--prey2_strategy', type=str, choices=["runner", "killer", "
 args = parser.parse_args()
 
 # Initialize agents based on user input
-if args.prey1_strategy == random and args.prey2_strategy == random:
+if args.prey1_strategy == "random":
     prey1_agent = RandomAgent('prey1')
-    prey2_agent = RandomAgent('prey2')
 else:
     prey1_agent = PreyAgent('prey1', args.prey1_strategy)
+
+if args.prey2_strategy == "random":
+    prey2_agent = RandomAgent('prey2')
+else:
     prey2_agent = PreyAgent('prey2', args.prey2_strategy)
 hunter_agent = HunterAgent()
 screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
 clock = pygame.time.Clock()
 
-# Set initial positions
-prey1_pos = [0, 0]
-prey2_pos = [0, GRID_SIZE - 1]
-hunter_pos = [GRID_SIZE - 1, GRID_SIZE // 2]
+# Function to generate a random position
+def generate_random_position(grid_size, obstacles):
+    while True:
+        pos = [random.randint(0, grid_size - 1), random.randint(0, grid_size - 1)]
+        if tuple(pos) not in obstacles:
+            return pos
+
+# Function to generate random obstacles
+def generate_random_obstacles(num_obstacles, grid_size, exclusions):
+    obstacles = set()
+    while len(obstacles) < num_obstacles:
+        x = random.randint(1, grid_size - 1)
+        y = random.randint(1, grid_size - 2)
+        if (x, y) not in obstacles and (x, y) not in exclusions:
+            obstacles.add((x, y))
+    return list(obstacles)
+
+# Set initial positions randomly
 end_pos = [GRID_SIZE - 1, GRID_SIZE // 2]
+prey1_pos = generate_random_position(GRID_SIZE, [tuple(end_pos)])
+prey2_pos = generate_random_position(GRID_SIZE, [tuple(prey1_pos),tuple(end_pos)])
+hunter_pos = generate_random_position(GRID_SIZE, [tuple(prey1_pos), tuple(prey2_pos),tuple(end_pos)])
+
+# Generate obstacles
+obstacles = generate_random_obstacles(NUM_OBSTACLES, GRID_SIZE, [tuple(prey1_pos), tuple(prey2_pos), tuple(hunter_pos), tuple(end_pos)])
+
 
 # Active status
 prey1_active = True
@@ -68,18 +92,6 @@ prey2_reach = False
 prey1_dead = False
 prey2_dead = False
 
-# Function to generate random obstacles
-def generate_random_obstacles(num_obstacles, grid_size):
-    obstacles = set()
-    while len(obstacles) < num_obstacles:
-        x = random.randint(1, grid_size - 1)
-        y = random.randint(1, grid_size - 2)
-        if (x, y) not in obstacles and (x, y) not in [tuple(prey1_pos), tuple(prey2_pos), tuple(hunter_pos), tuple(end_pos)]:
-            obstacles.add((x, y))
-    return list(obstacles)
-
-# Generate obstacles
-obstacles = generate_random_obstacles(NUM_OBSTACLES, GRID_SIZE)
 
 def draw_grid():
     for x in range(GRID_SIZE):
@@ -131,18 +143,28 @@ def is_adjacent_to_hunter(prey_pos, hunter_pos):
             (hunter_pos[0] + 1, hunter_pos[1])
         ]
         return tuple(prey_pos) in adjacent_positions or tuple(prey_pos) == tuple(hunter_pos)
+    
+def is_adjacent_to_end(prey_pos, end_pos):
+        if prey_pos is None or end_pos is None:
+            return False
+        adjacent_positions = [
+            (end_pos[0], end_pos[1] - 1),
+            (end_pos[0], end_pos[1] + 1),
+            (end_pos[0] - 1, end_pos[1])
+        ]
+        return tuple(prey_pos) in adjacent_positions or tuple(prey_pos) == tuple(end_pos)
 
 def check_win_conditions():
     global hunter_pos, prey1_active, prey2_active, prey1_pos, prey2_pos, hunter_active, prey1_reach, prey2_reach, end_pos, prey1_dead, prey2_dead
 
     # Check if prey1 reaches the endpoint
-    if prey1_pos == end_pos and not prey1_reach:
+    if is_adjacent_to_end(prey1_pos, end_pos) and not prey1_reach:
         print("Prey 1 has reached the endpoint!")
         prey1_reach = True
         prey1_active = False
 
     # Check if prey2 reaches the endpoint
-    if prey2_pos == end_pos and not prey2_reach:
+    if is_adjacent_to_end(prey2_pos, end_pos) and not prey2_reach:
         print("Prey 2 has reached the endpoint!")
         prey2_reach = True
         prey2_active = False
@@ -198,12 +220,12 @@ def remove_player(player):
 
 
 def reset_game_state():
-    global prey1_pos, prey2_pos, hunter_pos, end_pos, prey1_active, prey2_active, hunter_active
+    global prey1_pos, prey2_pos, hunter_pos, end_pos, prey1_active, prey2_active, hunter_active, obstacles
     global combined_prey_active, combined_prey_pos, prey1_reach, prey2_reach, prey1_dead, prey2_dead
-    prey1_pos = [0, 0]
-    prey2_pos = [0, GRID_SIZE - 1]
-    hunter_pos = [GRID_SIZE - 1, GRID_SIZE // 2]
     end_pos = [GRID_SIZE - 1, GRID_SIZE // 2]
+    prey1_pos = generate_random_position(GRID_SIZE, [tuple(end_pos)])
+    prey2_pos = generate_random_position(GRID_SIZE, [tuple(prey1_pos),tuple(end_pos)])
+    hunter_pos = generate_random_position(GRID_SIZE, [tuple(prey1_pos), tuple(prey2_pos),tuple(end_pos)])
     prey1_active = True
     prey2_active = True
     hunter_active = True
@@ -214,7 +236,7 @@ def reset_game_state():
     prey1_dead = False
     prey2_dead = False
     obstacles.clear()
-    obstacles.extend(generate_random_obstacles(NUM_OBSTACLES, GRID_SIZE))
+    obstacles = generate_random_obstacles(NUM_OBSTACLES, GRID_SIZE, [tuple(prey1_pos), tuple(prey2_pos), tuple(hunter_pos), tuple(end_pos)])
 
 def game_loop():
     global prey1_active, prey2_active, hunter_active, prey1_reach, prey2_reach, prey1_dead, prey2_dead, combined_prey_active
@@ -266,7 +288,7 @@ def game_loop():
             prey1_active = False
             prey2_active = False
         
-        if args.prey1_strategy == 'killer' and args.prey2_strategy == 'killer' and combined_prey_active:
+        if combined_prey_active:
             combined_prey_action, _, _ = prey1_agent.choose_action(state)
             move_player(state['combined_prey_pos'], combined_prey_action, combined_prey_active)
             combinedPreyMoves += 1
@@ -398,21 +420,12 @@ if __name__ == "__main__":
     plt.close()
 
 
-    if (args.prey1_strategy == 'alive' and args.prey2_strategy == 'alive') or (args.prey1_strategy == 'runner' and args.prey2_strategy == 'runner') or (args.prey1_strategy == 'random' and args.prey2_strategy == 'random') or (args.prey1_strategy == 'mixed' and args.prey2_strategy == 'mixed'):
-        # Plot the data
-        agent_steps = {
-            'Prey 1': stepsprey1,
-            'Prey 2': stepsprey2,
-            'Hunter': stepshunter
-        }
-        
-    elif args.prey1_strategy == 'killer' and args.prey2_strategy == 'killer':
-        agent_steps = {
+    agent_steps = {
             'Prey 1': stepsprey1,
             'Prey 2': stepsprey2,
             'Hunter': stepshunter,
             'Combined Prey': stepsCombinedPrey
-        }
+        }   
         
 
     avg_steps = {agent: sum(steps) / len(steps) for agent, steps in agent_steps.items()}
