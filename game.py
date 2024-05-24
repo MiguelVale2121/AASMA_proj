@@ -14,7 +14,7 @@ from randomAgent import RandomAgent
 GRID_SIZE = 30
 CELL_SIZE = 20
 SCREEN_SIZE = GRID_SIZE * CELL_SIZE
-FPS = 10
+FPS = 1000
 
 # Colors
 WHITE = (255, 255, 255)
@@ -365,7 +365,7 @@ if __name__ == "__main__":
     stepshunter = []
     stepsCombinedPrey = []
 
-    for i in range(1):
+    for i in range(100):
         run = game_loop()
         data = tuple(map(lambda i, j: i + j, data, run))
         stepsprey1 += [run[0]]
@@ -432,7 +432,7 @@ if __name__ == "__main__":
     errors = {agent: (max(steps) - min(steps)) / 2 for agent, steps in agent_steps.items()}
 
     fig, ax = plt.subplots()
-    bars = ax.bar(avg_steps.keys(), avg_steps.values(), yerr=errors.values(), capsize=5, color=['green', 'blue', 'red'])
+    bars = ax.bar(avg_steps.keys(), avg_steps.values(), yerr=errors.values(), capsize=5, color=['green', 'blue', 'red', 'purple'])
 
     ax.set_ylabel('Avg. Steps Per Episode')
     ax.set_title('Average Steps Per Episode for Each Agent')
