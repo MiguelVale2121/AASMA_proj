@@ -14,7 +14,7 @@ from randomAgent import RandomAgent
 GRID_SIZE = 30
 CELL_SIZE = 20
 SCREEN_SIZE = GRID_SIZE * CELL_SIZE
-FPS = 1000
+FPS = 10
 
 # Colors
 WHITE = (255, 255, 255)
@@ -365,7 +365,7 @@ if __name__ == "__main__":
     stepshunter = []
     stepsCombinedPrey = []
 
-    for i in range(100):
+    for i in range(1):
         run = game_loop()
         data = tuple(map(lambda i, j: i + j, data, run))
         stepsprey1 += [run[0]]
